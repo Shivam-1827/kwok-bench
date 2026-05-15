@@ -47,7 +47,7 @@ Initial sequential pod creation benchmark using default `client-go` rate limits.
 | **Throughput**  | 5.00 pods/sec                                            |
 | **Observation** | Limited primarily by default client-side API throttling. |
 
-### Iteration 2 — Concurrent Workload Generation (Current)
+### Iteration 2 — Concurrent Workload Generation (Current `v2_concurrent_baseline.go`)
 
 Introduced bounded concurrency, increased QPS/Burst settings, and a parallelized pod creation workflow.
 
@@ -56,6 +56,15 @@ Introduced bounded concurrency, increased QPS/Burst settings, and a parallelized
 | **API Creation Phase**          | 8.01 seconds   |
 | **Total Scheduling Completion** | 18.85 seconds  |
 | **Throughput**                  | 53.04 pods/sec |
+
+### Iteration 3 — Percentile Tail Latency Tracking (Current `main.go`)
+To properly analyze scheduling degradation under load, the PoC now extracts the exact `CreationTimestamp` and `LastTransitionTime` (for the `PodScheduled` condition) from the Kubernetes API to calculate percentile latencies.
+
+* **P50 (Median):** 5s
+* **P90 Latency:** 9s
+* **P99 Tail Latency:** 10s
+
+*Observation: While average throughput is high, tracking the P99 tail latency reveals how the scheduling queue degrades as API pressure builds (tail latency is double the median). Tracking this will be crucial for regression testing.*
 
 ## Architecture Notes
 
