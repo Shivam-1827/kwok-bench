@@ -66,6 +66,20 @@ To properly analyze scheduling degradation under load, the PoC now extracts the 
 
 *Observation: While average throughput is high, tracking the P99 tail latency reveals how the scheduling queue degrades as API pressure builds (tail latency is double the median). Tracking this will be crucial for regression testing.*
 
+### Iteration 4 — Gang Scheduling Workload Simulation (Current `main.go`)
+To align the PoC closer to Koordinator's actual use cases (e.g., data processing and AI workloads), the workload generator was extended to mock **Gang Scheduling** patterns. 
+
+Instead of generating 1,000 independent pods, the workload is dynamically chunked into **100 distinct gangs (10 pods per gang)**. This is achieved by injecting the `scheduling.sigs.k8s.io/pod-group` label dynamically during the concurrent creation phase.
+
+* **Target:** 1000 Pods (100 Gangs)
+* **API Creation Phase:** 8.01s
+* **Total Time to 'Scheduled':** 18.34s
+* **Throughput:** 54.53 pods/sec
+* **P50 (Median) Latency:** 5s
+* **P99 (Tail) Latency:** 10s
+
+*Observation: Simulating strict gang constraints at the label level did not negatively impact the API creation throughput. The next architectural step is determining whether the benchmark should programmatically generate actual `PodGroup` CRDs via the Kubernetes dynamic client, or rely purely on these labels for lightweight simulation.*
+
 ## Architecture Notes
 
 ### Concurrent Workload Generation

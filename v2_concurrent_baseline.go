@@ -1,3 +1,5 @@
+//go:build concurrentbaseline
+
 package main
 
 import (

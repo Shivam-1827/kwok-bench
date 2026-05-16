@@ -1,3 +1,5 @@
+//go:build percentilelatency
+
 package main
 
 import (
@@ -34,9 +36,8 @@ func main() {
 	podCount := 1000
 	namespace := "default"
 	concurrencyLimit := 50
-	gangSize := 10 // We will divide 1000 pods into 100 separate gangs
 
-	fmt.Printf("Starting benchmark: Creating %d pods (%d per Gang) with concurrency %d...\n", podCount, gangSize, concurrencyLimit)
+	fmt.Printf("Starting benchmark: Creating %d pods with concurrency %d...\n", podCount, concurrencyLimit)
 	startTime := time.Now()
 
 	var wg sync.WaitGroup
@@ -51,15 +52,11 @@ func main() {
 			defer wg.Done()
 			defer func() { <-semaphore }()
 
-			gangID := podIdx / gangSize
-			gangName := fmt.Sprintf("kwok-gang-group-%d", gangID)
-
 			pod := &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: fmt.Sprintf("kwok-bench-pod-%d", podIdx),
 					Labels: map[string]string{
 						"app": "kwok-bench",
-						"scheduling.sigs.k8s.io/pod-group": gangName,
 					},
 				},
 				Spec: v1.PodSpec{
@@ -107,7 +104,7 @@ func main() {
 		}
 
 		if scheduledCount >= podCount {
-			finalPods = pods.Items
+			finalPods = pods.Items 
 			break
 		}
 		time.Sleep(500 * time.Millisecond)
@@ -116,7 +113,7 @@ func main() {
 	totalTime := time.Since(startTime)
 	throughput := float64(podCount) / totalTime.Seconds()
 
-	// P50, P90, P99 LATENCY CALCULATION
+	//  P50, P90, P99 LATENCY CALCULATION 
 	var latencies []time.Duration
 	for _, p := range finalPods {
 		creationTime := p.CreationTimestamp.Time
@@ -135,21 +132,21 @@ func main() {
 		}
 	}
 
-	sort.Slice(latencies, func(i, j int) bool {
-		return latencies[i] < latencies[j]
-	})
-
 	var p50, p90, p99 time.Duration
 	if len(latencies) > 0 {
+		sort.Slice(latencies, func(i, j int) bool {
+			return latencies[i] < latencies[j]
+		})
+
 		p50 = latencies[int(float64(len(latencies))*0.50)]
 		p90 = latencies[int(float64(len(latencies))*0.90)]
 		p99 = latencies[int(float64(len(latencies))*0.99)]
 	}
 
-	fmt.Printf("\nSUCCESS: 1000 pods (100 Gangs) successfully scheduled!\n")
+	fmt.Printf("\nSUCCESS: 1000 pods successfully scheduled!\n")
 	fmt.Printf("Total Time: %.2f seconds\n", totalTime.Seconds())
 	fmt.Printf("Throughput: %.2f pods/sec\n\n", throughput)
-	
+
 	fmt.Println("--- Scheduling Latency Percentiles ---")
 	fmt.Printf("P50 (Median): %v\n", p50)
 	fmt.Printf("P90:          %v\n", p90)
